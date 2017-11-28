@@ -16,11 +16,15 @@ el=[]
 d_fn_i={}
 # dictonary to translate index to fn name string
 d_i_fn={}
+
+# list to store node colors
+l_color=[]
 count=0
 # read bp fns from a file
 # stored with:
 # grep '^#' /auto/wwwPeople/tarusha2/logs2/rloc.gdb > $file
-fn_file=open('/auto/wwwPeople/tarusha2/logs2/rloc.gdb','r')
+#fn_file=open('/auto/wwwPeople/tarusha2/logs2/rloc.gdb','r')
+fn_file=open('/nobackup/tarusha2/tools/data_science/gdb_lvx_all.txt','r')
 pp('Reading fns from file')
 dic={}
 for i,line in enumerate(fn_file):
@@ -70,7 +74,20 @@ for key in d_bt:
     #pp(d_bt[key])
     print('Adding %d nodes'%(len(d_bt[key])))
     G.add_nodes_from(d_bt[key])
-    
+
+# add labels
+for node in G.nodes():
+    G.node[node]['label']=node
+
+# create color list
+for node in G.nodes():
+    if 'sfltr' in node:
+        l_color.append('r')
+    else:
+        l_color.append('b')
+
+
+node_labels = nx.get_node_attributes(G,'label')
 print('XXX--HT 1')
 
 #now get the reverse mapping of this dict
@@ -110,15 +127,27 @@ print('SIZE index -> fn = %d'%(len(d_i_fn)))
 print('SIZE fn -> index = %d'%(len(d_fn_i)))
 
 # draw and save as png
-pos = nx.spring_layout(G,k=0.45,iterations=100)
+#pos = nx.spring_layout(G,k=0.45,iterations=200)
+pos = nx.nx_pydot.graphviz_layout(G, prog='dot')
+
 #nx.draw(G, pos, d_i_fn,node_size=60,font_size=8)
 #nx.draw(G, d_i_fn,node_size=60,font_size=8)
-nx.draw(G, pos,size=60,font_size=8)
+#nx.draw_networkx_labels(G, d_i_fn,node_size=60,font_size=8)
+#nx.draw(G, pos,node_size=5, edge_size=2, size=2,font_size=8)
+nx.draw_networkx_nodes(G, pos, nodelist=None, node_size=10, node_color=l_color, node_shape='o', alpha=1.0, linewidths=None, label=None)
+nx.draw_networkx_edges(G, pos, width=0.2, edge_color='k',style='solid',alpha=1.0, arrows=True, label=None)
+nx.draw_networkx_labels(G, pos, labels = node_labels, size=8,font_size=3, font_family='sans-serif')
 #pp(G.nodes())
+GV= nx.nx_pydot.to_pydot(G)
+pp(dir(GV))
+GV.set_rankdir('BT')
+GV.write_png('g.png')
 print('G Nodes = %d'%(len(G.nodes())))
 print('G Edges = %d'%(len(G.edges())))
 print('Total Nodes in HT = %d'%(len(d_i_fn)))
 #pp(G.edges())
 print('saving image')
-#nx.draw_networkx_labels(G, d_i_fn,node_size=60,font_size=8)
-plt.savefig("yup.png")
+plt.axis('off') 
+plt.autoscale(True)
+plt.annotate('GRAPH')
+plt.savefig("yup.png", dpi=1000)
