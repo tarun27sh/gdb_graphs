@@ -64,7 +64,7 @@ d_fn_i = {k:v for k,v in d_fn_i.iteritems() if v!=0}
 
 pp(d_bt)
 print(len(d_bt))
-G=nx.Graph()
+G=nx.DiGraph()
 #G.add_node(1), covers *ALL* the functions
 for key in d_bt:
     #pp(d_bt[key])
@@ -110,9 +110,10 @@ print('SIZE index -> fn = %d'%(len(d_i_fn)))
 print('SIZE fn -> index = %d'%(len(d_fn_i)))
 
 # draw and save as png
-#pos = nx.spectral_layout(G)
+pos = nx.spring_layout(G,k=0.45,iterations=100)
 #nx.draw(G, pos, d_i_fn,node_size=60,font_size=8)
-nx.draw(G, d_i_fn,node_size=60,font_size=8)
+#nx.draw(G, d_i_fn,node_size=60,font_size=8)
+nx.draw(G, pos,size=60,font_size=8)
 #pp(G.nodes())
 print('G Nodes = %d'%(len(G.nodes())))
 print('G Edges = %d'%(len(G.edges())))
