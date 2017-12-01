@@ -1,6 +1,6 @@
 # Python_gdb_networkx_graphs
 
-![Alt text](yup.png?raw=true "")
+![Alt text](some_library_graph.png?raw=true "")
 
 
 ## Description  
