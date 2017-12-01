@@ -24,7 +24,7 @@ count=0
 # stored with:
 # grep '^#' /auto/wwwPeople/tarusha2/logs2/rloc.gdb > $file
 #fn_file=open('/auto/wwwPeople/tarusha2/logs2/rloc.gdb','r')
-fn_file=open('/nobackup/tarusha2/tools/data_science/gdb_lvx_all.txt','r')
+fn_file=open('/tmp/gdb_l2fib_2.txt','r')
 pp('Reading fns from file')
 dic={}
 for i,line in enumerate(fn_file):
@@ -149,5 +149,4 @@ print('Total Nodes in HT = %d'%(len(d_i_fn)))
 print('saving image')
 plt.axis('off') 
 plt.autoscale(True)
-plt.annotate('GRAPH')
-plt.savefig("yup.png", dpi=1000)
+plt.savefig("yup.png", dpi=500)
