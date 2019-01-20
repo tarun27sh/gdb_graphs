@@ -1,28 +1,26 @@
 # Author: 
 #       Tarun Sharma (tarun27sh@gmail.com)
 # Description:
-#       Following code reads gdb backtrace logs
-#       and generates a function call graphs and saves
-#       as svg output.
+#       1. reads gdb backtrace logs
+#       2. generates a function call graphs
+#       3. saves output in SVG format
 # Usage:
 #       ./gen_graphs.py <gdb_backtrace.log> 
 # Date:
 #       2019-01-19
 import os
-from pprint import pprint as pp
 from matplotlib import use as muse
 from copy import deepcopy
 muse('Agg')
 import sys
-#from graphviz import Digraph
 import pydotplus
 
 start_color = {
-          # format - style, fg, bg
-          'info':'\x1b[6;0;32m', # style, fg, bg
-          'dbg': '\x1b[6;23;40m',
-          'err': '\x1b[6;0;31m', # style, fg, bg
-         }
+                # format - style, fg, bg
+                'info':'\x1b[6;0;32m', # style, fg, bg
+                'dbg': '\x1b[6;23;40m',
+                'err': '\x1b[6;0;31m', # style, fg, bg
+              }
 end_color='\x1b[0m'
 
 def special_print(text, level):

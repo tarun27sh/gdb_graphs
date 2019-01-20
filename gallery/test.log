@@ -1,0 +1,89 @@
+Type commands for breakpoint(s) 1-10, one per line.
+End with a line saying just "end".
+Starting program: /home/vagrant/c_code/a.out 
+
+Breakpoint 9, main () at he.c:15
+15		func1();
+#0  main () at he.c:15
+
+Breakpoint 1, func1 () at he.c:12
+12	void func1(void) { func2(); }
+#0  func1 () at he.c:12
+#1  0x00000000004005a0 in main () at he.c:15
+
+Breakpoint 2, func2 () at he.c:11
+11	void func2(void) { func3(); }
+#0  func2 () at he.c:11
+#1  0x0000000000400594 in func1 () at he.c:12
+#2  0x00000000004005a0 in main () at he.c:15
+
+Breakpoint 3, func3 () at he.c:10
+10	void func3(void) { func4(); }
+#0  func3 () at he.c:10
+#1  0x0000000000400588 in func2 () at he.c:11
+#2  0x0000000000400594 in func1 () at he.c:12
+#3  0x00000000004005a0 in main () at he.c:15
+
+Breakpoint 4, func4 () at he.c:9
+9	void func4(void) { func5(); }
+#0  func4 () at he.c:9
+#1  0x000000000040057c in func3 () at he.c:10
+#2  0x0000000000400588 in func2 () at he.c:11
+#3  0x0000000000400594 in func1 () at he.c:12
+#4  0x00000000004005a0 in main () at he.c:15
+
+Breakpoint 5, func5 () at he.c:8
+8	void func5(void) { func6(); }
+#0  func5 () at he.c:8
+#1  0x0000000000400570 in func4 () at he.c:9
+#2  0x000000000040057c in func3 () at he.c:10
+#3  0x0000000000400588 in func2 () at he.c:11
+#4  0x0000000000400594 in func1 () at he.c:12
+#5  0x00000000004005a0 in main () at he.c:15
+
+Breakpoint 6, func6 () at he.c:7
+7	void func6(void) { func7(); }
+#0  func6 () at he.c:7
+#1  0x0000000000400564 in func5 () at he.c:8
+#2  0x0000000000400570 in func4 () at he.c:9
+#3  0x000000000040057c in func3 () at he.c:10
+#4  0x0000000000400588 in func2 () at he.c:11
+#5  0x0000000000400594 in func1 () at he.c:12
+#6  0x00000000004005a0 in main () at he.c:15
+
+Breakpoint 7, func7 () at he.c:6
+6	void func7(void) { func8(); }
+#0  func7 () at he.c:6
+#1  0x0000000000400558 in func6 () at he.c:7
+#2  0x0000000000400564 in func5 () at he.c:8
+#3  0x0000000000400570 in func4 () at he.c:9
+#4  0x000000000040057c in func3 () at he.c:10
+#5  0x0000000000400588 in func2 () at he.c:11
+#6  0x0000000000400594 in func1 () at he.c:12
+#7  0x00000000004005a0 in main () at he.c:15
+
+Breakpoint 8, func8 () at he.c:5
+5	void func8(void) { func9(); }
+#0  func8 () at he.c:5
+#1  0x000000000040054c in func7 () at he.c:6
+#2  0x0000000000400558 in func6 () at he.c:7
+#3  0x0000000000400564 in func5 () at he.c:8
+#4  0x0000000000400570 in func4 () at he.c:9
+#5  0x000000000040057c in func3 () at he.c:10
+#6  0x0000000000400588 in func2 () at he.c:11
+#7  0x0000000000400594 in func1 () at he.c:12
+#8  0x00000000004005a0 in main () at he.c:15
+
+Breakpoint 10, func9 () at he.c:4
+4	static void func9(void) { printf("leaf\n");; }
+#0  func9 () at he.c:4
+#1  0x0000000000400540 in func8 () at he.c:5
+#2  0x000000000040054c in func7 () at he.c:6
+#3  0x0000000000400558 in func6 () at he.c:7
+#4  0x0000000000400564 in func5 () at he.c:8
+#5  0x0000000000400570 in func4 () at he.c:9
+#6  0x000000000040057c in func3 () at he.c:10
+#7  0x0000000000400588 in func2 () at he.c:11
+#8  0x0000000000400594 in func1 () at he.c:12
+#9  0x00000000004005a0 in main () at he.c:15
+[Inferior 1 (process 3363) exited normally]
