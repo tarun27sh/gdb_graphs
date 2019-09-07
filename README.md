@@ -4,6 +4,23 @@
 
 ## Description
 Python command line tool to visualize function-call-flow for a C program using graphviz dot object and matplotlib.
+    
+    Directory structure:
+
+    ├── gallery
+    │   ├── graph_GNU_MAKE_.png
+    │   ├── graph_QEMU.png
+    │   ├── graph_VIM.png
+    │   ├── some_library_graph.png
+    │   ├── test.png
+    │   └── test.svg
+    ├── gen_graph.py
+    ├── LICENSE
+    ├── README.md
+    ├── requiments.txt
+    └── test
+        ├── test.c
+        └── test.log
 
 ## Motivation
 I wanted to view call-graph for OS source (written in C) that connected APIs within one layer and APIs across layers.
@@ -200,8 +217,7 @@ There are two parts to the whole process:
 ### Dependencies    
 
     sudo apt-get install graphviz
-	sudo pip install matplotlib
-    sudo pip install pydotplus
+    sudo python3 -m pip install -r requiments.txt
 
 
 ### Now run gen_graph.py    
