@@ -34,32 +34,35 @@ def add_nodes(g, l_unique_nodes):
         if ',' not in elem:
             g.add_node(pydotplus.Node(elem, 
                                       style="filled", 
-                                      fillcolor='blue', 
+                                      fillcolor='cornflowerblue', 
                                       shape='Mrecord', 
-                                      fontname="Courier New Bold", 
-                                      fontsize=12.0, 
-                                      fontcolor='white'))
+                                      fontname="Consolas", 
+                                      fontsize=8.0))
+    #                                  fontcolor='white'))
     print('\t# of nodes: {}'.format(len(l_unique_nodes)))
 
 def add_edges(g, file_in):
     # get edges
     fn_file=open(file_in,'r')
     special_print('[3] adding edges..', 'info')
-    l=[]
-    el=[]
-    l_master_bt=[]
+    curr_bt=[]
+    edge_tuples=[]
+    backtraces=[]
     for i,line in enumerate(fn_file):
         line=line.strip()
         if '#' in line:
+            # head node of backtrace
             if '#0' in line:
                 fn=line.split()[1]
-                if len(l) > 0 :
-                    l_master_bt.append(l)
-                    l=[]
-                l.append(line.split()[1])
+                # previous backtrace complete, add it to master list
+                if len(curr_bt) > 0 :
+                    backtraces.append(curr_bt)
+                    curr_bt = []
+                # frame 0 fn-name always at index 1 of line.split()
+                curr_bt.append(line.split()[1])
             else:
                 if 'breakpoint' in line or '\\' in line:
-                    continue
+                    pass #continue
                 if line.split()[1].startswith('0x'):
                     fn = line.split()[3]
                 else:
@@ -70,26 +73,27 @@ def add_edges(g, file_in):
                    ('<' not in fn) and \
                    ('=' not in fn) and \
                    ('/' not in fn):
-                    l.append(fn)
+                    curr_bt.append(fn)
     # save the last backtrace
-    l_master_bt.append(l)
-    for bt in l_master_bt:
+    backtraces.append(list(curr_bt))
+    for bt in backtraces:
         fn_old = bt[0]
         for fn in bt[1:]:
-            if tuple([fn, fn_old]) not in el:
+            if (fn, fn_old) not in edge_tuples:
                 #print('adding edge:  {} --> {}'.format(fn, fn_old))
-                el.append(tuple([fn, fn_old]))
+                edge_tuples.append((fn, fn_old))
             fn_old=deepcopy(fn)
 
     l_unique_edges=[]
     file_out_data=file_in[:-4]+".data"
     thefile = open(file_out_data, 'w')
-    for edge_tuple in el:
+    for edge_tuple in edge_tuples:
         if edge_tuple not in l_unique_edges:
             g.add_edge(pydotplus.Edge(edge_tuple))
             l_unique_edges.append(edge_tuple)
 
     print('\t# of edges: {}'.format(len(l_unique_edges)))
+    return len(l_unique_edges)
 
 def parse_gdb_logs(file_in):
     l_unique_nodes=[]
@@ -99,8 +103,8 @@ def parse_gdb_logs(file_in):
         line=line.strip()
         t_temp=()
         if '#' in line and (len(line.split(' ')) >= 4):
+            # new back trace
             if '#0' in line:
-                # new frame
                 # if list has previous frame, add it to master list
                 if line.split()[1].startswith('0x'):
                     fn = line.split()[3]
@@ -137,6 +141,19 @@ def save_graph(g, file_in):
     print("\t{}\n".format(full_output_name))
     g.write_svg(full_output_name)
 
+def add_legend(g, nedges, nnodes):
+    node = pydotplus.Node(
+                              label='Nodes = {}\n Edges = {}'.format(nedges, nnodes),
+                              style="filled", 
+                              fillcolor='gold1', 
+                              shape='box', 
+                              fontname="Consolas", 
+                              fontsize=14.0)
+    #node = pydotplus.Node('legend')
+    node.set("shape", 'box')
+    g.add_node(node)
+    node.set('label', 'Nodes = {}\n Edges = {}'.format(nedges, nnodes))
+
 def process(file_in):
     # hold egdes in list of tuples
     l_unique_nodes=[]
@@ -145,9 +162,11 @@ def process(file_in):
                       graph_name='Created by: Tarun Sharma (tarun27sh@gmail.com)', 
                       rankdir='LR', 
                       simplify='True')
+    #                  bgcolor='grey35')
     l_unique_nodes = parse_gdb_logs(file_in)
     add_nodes(g, l_unique_nodes)
-    add_edges(g, file_in)
+    no_of_edges = add_edges(g, file_in)
+    add_legend(g, no_of_edges, len(l_unique_nodes))
     save_graph(g, file_in)
 
 if __name__ == "__main__":
