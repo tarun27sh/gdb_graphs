@@ -150,9 +150,7 @@ def add_legend(g, nedges, nnodes):
                               fontname="Consolas", 
                               fontsize=14.0)
     #node = pydotplus.Node('legend')
-    node.set("shape", 'box')
     g.add_node(node)
-    node.set('label', 'Nodes = {}\n Edges = {}'.format(nedges, nnodes))
 
 def process(file_in):
     # hold egdes in list of tuples
