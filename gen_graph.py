@@ -15,6 +15,44 @@ muse('Agg')
 import sys
 import pydotplus
 
+# Make resulting SVG interactive
+js_string='''
+<script>
+        function findNeighbours(nodeId) {
+            edges = document.getElementsByClassName("edge");
+            for(var i = edges.length - 1; i &gt; 0; i--) {
+                edge = edges[i];
+                if (edge.id.includes(nodeId)) {
+                    neighs = edges[i].id.split('|');
+                    var neightId = '';
+                    if (neighs[0] == nodeId) {
+                        neightId = neighs[1];
+                    } else {
+                        neightId = neighs[0];
+                    }
+                    var neighElement =  document.getElementById(neightId)
+                    var inner_polygon = neighElement.getElementsByTagName('polygon');
+                    inner_polygon[0].setAttribute("style", "fill: orange");
+                }
+            }
+        }
+        function nodeClick(element) {
+            //element.setAttribute("style", "fontWeight = bold");
+            findNeighbours(element.id);
+            var attrs = element.attributes;
+            var output = "";
+            var inner_polygon = element.getElementsByTagName('polygon');
+            inner_polygon[0].setAttribute("style", "fill: green");
+        }
+
+        window.addEventListener('load',function(){
+            nodes = document.getElementsByClassName("node");
+            for(var i = nodes.length - 1; i &gt; 0; i--) {
+                nodes[i].setAttribute("onclick", 'nodeClick(this)');
+            }
+        })
+</script>
+'''
 start_color = {
                 # format - style, fg, bg
                 'info':'\x1b[6;0;32m', # style, fg, bg
@@ -33,11 +71,12 @@ def add_nodes(g, l_unique_nodes):
     for elem in l_unique_nodes:
         if ',' not in elem:
             g.add_node(pydotplus.Node(elem, 
+                                      id=elem,
                                       style="filled", 
                                       fillcolor='cornflowerblue', 
-                                      shape='Mrecord', 
+                                      shape='box', 
                                       fontname="Consolas", 
-                                      fontsize=8.0))
+                                      fontsize=12.0))
     #                                  fontcolor='white'))
     print('\t# of nodes: {}'.format(len(l_unique_nodes)))
 
@@ -89,7 +128,9 @@ def add_edges(g, file_in):
     thefile = open(file_out_data, 'w')
     for edge_tuple in edge_tuples:
         if edge_tuple not in l_unique_edges:
-            g.add_edge(pydotplus.Edge(edge_tuple))
+            g.add_edge(pydotplus.Edge(edge_tuple,id="{}|{}".format( 
+                                                              edge_tuple[0], 
+                                                              edge_tuple[1])))
             l_unique_edges.append(edge_tuple)
 
     print('\t# of edges: {}'.format(len(l_unique_edges)))
@@ -140,6 +181,16 @@ def save_graph(g, file_in):
     full_output_name="{}/{}.svg".format(os.getcwd(), file_name[:-4])
     print("\t{}\n".format(full_output_name))
     g.write_svg(full_output_name)
+    search_string = 'graph0'
+    new_lines = ''
+    with open(full_output_name, 'r') as f:
+        for line in f:
+            if search_string in line:
+                print('found --> at line# {}'.format(line))
+                new_lines += js_string
+            new_lines += line
+    with open(full_output_name, "w") as text_file:
+        text_file.write(new_lines)
 
 def add_legend(g, nedges, nnodes):
     node = pydotplus.Node(
