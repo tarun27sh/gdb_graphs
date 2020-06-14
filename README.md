@@ -2,6 +2,10 @@
 
 ![Alt text](gallery/some_library_graph.png?raw=true "")
 
+## New - Interactive graphs
+Click on a node and entire parent and child chain is highlighted
+// to reset -  reload page - untill I find a better way to do from JS
+
 ## Description
 Python command line tool to visualize function-call-flow for a C program using graphviz dot object and matplotlib.
     
@@ -212,7 +216,7 @@ There are two parts to the whole process:
 
 
 
-## Part II: run prepare_graph_from_fns.py on collected data
+## Part II: run gen_graph.py on collected data
 
 ### Dependencies    
 
@@ -224,10 +228,10 @@ There are two parts to the whole process:
 
     $ python gen_graphs.py
     Usage:
-    ./gen_graphs.py  <gdb_backtrace_logs>
+    python3 ./gen_graphs.py  <gdb_backtrace_logs>
     
 
-    $ python gen_graphs.py ../c_code/gdb.log
+    $ python3 gen_graphs.py test.log
     [1] parsing gdb logs..
     [2] adding nodes..
             # of nodes: 10
