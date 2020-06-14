@@ -18,39 +18,129 @@ import pydotplus
 # Make resulting SVG interactive
 js_string='''
 <script>
-        function findNeighbours(nodeId) {
-            edges = document.getElementsByClassName("edge");
-            for(var i = edges.length - 1; i &gt; 0; i--) {
-                edge = edges[i];
-                if (edge.id.includes(nodeId)) {
-                    neighs = edges[i].id.split('|');
-                    var neightId = '';
-                    if (neighs[0] == nodeId) {
-                        neightId = neighs[1];
-                    } else {
-                        neightId = neighs[0];
+<![CDATA[
+
+        class Node {
+            constructor(name) {
+                this.name = name;
+                this.parents = [];
+                this.children = [];
+                this.visited = false;
+            }
+        };
+        var graph = [];
+
+        function showNeighboursFast(nodeId) {
+            node = graph[nodeId];
+            if (node) {
+                console.log('FAST: #of P=' + node.parents.length + '#of Ch=' + node.children.length);
+                for(var i = node.parents.length - 1; i >= 0; i--) {
+                    var neighElement =  document.getElementById(node.parents[i]);
+                    if (neighElement) {
+                        var inner_polygon = neighElement.getElementsByTagName('polygon');
+                        inner_polygon[0].setAttribute("style", "fill: orange");
                     }
-                    var neighElement =  document.getElementById(neightId)
-                    var inner_polygon = neighElement.getElementsByTagName('polygon');
-                    inner_polygon[0].setAttribute("style", "fill: orange");
+                }
+                for(var i = node.children.length - 1; i >= 0; i--) {
+                    var neighElement =  document.getElementById(node.children[i]);
+                    if (neighElement) {
+                        var inner_polygon = neighElement.getElementsByTagName('polygon');
+                        inner_polygon[0].setAttribute("style", "fill: cyan");
+                    }
                 }
             }
         }
+
+        function showNeighboursInfluenceFast(nodeId, visitParents, visitChildren, level) {
+            // recursively, find all parents, chidlren and highlight them
+            //console.log('node = ' + nodeId + 'P?=' + visitParents + 'C?=' + visitChildren);
+            var node = graph[nodeId];
+            if (node && !node.visited) {
+                node.visited = true;
+                level++;
+                console.log(level + 'node = ' + node.name + '#of P = ' + node.parents.length + '#of Ch = ' + node.children.length);
+                
+
+                if (visitParents && node.parents && node.parents.length > 0) {
+                    for(var i = node.parents.length - 1; i >= 0; i--) {
+                        var neighElement =  document.getElementById(node.parents[i]);
+                        if (neighElement) {
+                            var inner_polygon = neighElement.getElementsByTagName('polygon');
+                            inner_polygon[0].setAttribute("style", "fill: orange");
+
+                            var inner_text = neighElement.getElementsByTagName('text');
+                            inner_text[0].setAttribute("style", "fill: black");
+                            
+                            showNeighboursInfluenceFast(node.parents[i], true, false, level);
+                        }
+                    }
+                }
+
+                if (visitChildren && node.children && node.children.length > 0) {
+                    for(var i = node.children.length - 1; i >= 0; i--) {
+                        var neighElement =  document.getElementById(node.children[i]);
+                        if (neighElement) {
+                            var inner_polygon = neighElement.getElementsByTagName('polygon');
+                            inner_polygon[0].setAttribute("style", "fill: cyan");
+
+                            var inner_text = neighElement.getElementsByTagName('text');
+                            inner_text[0].setAttribute("style", "fill: black");
+
+
+                            showNeighboursInfluenceFast(node.children[i], false, true, level);
+                        }
+                    }
+                }
+            }
+            return;
+        }
+
         function nodeClick(element) {
-            //element.setAttribute("style", "fontWeight = bold");
-            findNeighbours(element.id);
-            var attrs = element.attributes;
-            var output = "";
+            //showNeighboursFast(element.id);
+            showNeighboursInfluenceFast(element.id, true, true, 0);
             var inner_polygon = element.getElementsByTagName('polygon');
-            inner_polygon[0].setAttribute("style", "fill: green");
+            var inner_text = element.getElementsByTagName('text');
+            inner_polygon[0].setAttribute("style", "fill: yellow");
+            inner_text[0].setAttribute("style", "fill: black");
+        }
+
+        function printGraphElements() {
+            for (var key in graph) {
+                console.log('key=' + key + '; value=' + graph[key]);
+            }            
+        }
+
+        // graph[node] = [edge1, edg2 etc...]
+        function constructGraph() {
+            console.log('FAST: constructing graph');
+            edges = document.getElementsByClassName("edge");
+            for (var i=edges.length - 1; i>0; i--) {
+                var node0, node1;
+                nodes = edges[i].id.split('|')
+                node0 = nodes[0];
+                node1 = nodes[1];
+                if (!graph[node0]) {
+                    graph[node0] = new Node(node0);
+                }
+                graph[node0].children.push(node1);
+
+                if (!graph[node1]) {
+                    graph[node1] = new Node(node1);
+                }
+                graph[node1].parents.push(node0);
+            }
+            printGraphElements();
         }
 
         window.addEventListener('load',function(){
+            console.log('Add onclick property to all nodes');
             nodes = document.getElementsByClassName("node");
-            for(var i = nodes.length - 1; i &gt; 0; i--) {
+            for(var i = nodes.length - 1; i >= 0; i--) {
                 nodes[i].setAttribute("onclick", 'nodeClick(this)');
             }
+            constructGraph();
         })
+]]>
 </script>
 '''
 start_color = {
@@ -76,8 +166,8 @@ def add_nodes(g, l_unique_nodes):
                                       fillcolor='cornflowerblue', 
                                       shape='box', 
                                       fontname="Consolas", 
-                                      fontsize=12.0))
-    #                                  fontcolor='white'))
+                                      fontsize=12.0,
+                                      fontcolor='white'))
     print('\t# of nodes: {}'.format(len(l_unique_nodes)))
 
 def add_edges(g, file_in):
