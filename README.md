@@ -4,7 +4,7 @@
 
 
 ## Description
-Python command line tool to visualize function-call-flow for a C program using graphviz dot object and matplotlib.
+Python command line tool to visualize function-call-flow for a C/C++ program using graphviz dot object and matplotlib.
     
     Directory structure:
 
@@ -24,7 +24,7 @@ Python command line tool to visualize function-call-flow for a C program using g
         └── test.log
 
 ## Motivation
-I wanted to view call-graph for OS source (written in C) that connected APIs within one layer and APIs across layers.
+I wanted to view call-graph for OS source (written in C, C++) that connected APIs within one layer and APIs across layers.
 This helps in getting a bigger picture of the source code and makes understanding large code bases QUICK.
 
 ## Input
@@ -242,7 +242,7 @@ Open the svg file in a browser
 
 
 ## New 
-- Interactive graphs 
+- Interactive graphs:
   Click on a node and entire parent and child chain is highlighted
   (to reset -  reload page - untill I find a better way to do from JS)
 - C++ Support
