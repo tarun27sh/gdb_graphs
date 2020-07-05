@@ -2,9 +2,6 @@
 
 ![Alt text](gallery/some_library_graph.png?raw=true "")
 
-## New - Interactive graphs
-Click on a node and entire parent and child chain is highlighted
-// to reset -  reload page - untill I find a better way to do from JS
 
 ## Description
 Python command line tool to visualize function-call-flow for a C program using graphviz dot object and matplotlib.
@@ -242,3 +239,10 @@ There are two parts to the whole process:
 
 Open the svg file in a browser
 ![Alt text](gallery/test.png?raw=true "")
+
+
+## New 
+- Interactive graphs 
+  Click on a node and entire parent and child chain is highlighted
+  (to reset -  reload page - untill I find a better way to do from JS)
+- C++ Support

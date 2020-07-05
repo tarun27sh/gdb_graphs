@@ -160,8 +160,12 @@ def add_nodes(g, l_unique_nodes):
     special_print('[2] adding nodes..', 'info')
     for elem in l_unique_nodes:
         if ',' not in elem:
-            g.add_node(pydotplus.Node(elem, 
-                                      id=elem,
+            #print('adding {}'.format(elem.replace(":", "_")))
+            new_element_name = '\"{}\"'.format(elem)
+            #print('adding {}'.format(new_element_name))
+            g.add_node(pydotplus.Node(
+                                      new_element_name, 
+                                      id=new_element_name,
                                       style="filled", 
                                       fillcolor='cornflowerblue', 
                                       shape='box', 
@@ -218,10 +222,14 @@ def add_edges(g, file_in):
     thefile = open(file_out_data, 'w')
     for edge_tuple in edge_tuples:
         if edge_tuple not in l_unique_edges:
-            g.add_edge(pydotplus.Edge(edge_tuple,id="{}|{}".format( 
-                                                              edge_tuple[0], 
-                                                              edge_tuple[1])))
-            l_unique_edges.append(edge_tuple)
+            new_tuple = ('\"{}\"'.format(edge_tuple[0]),
+                         '\"{}\"'.format(edge_tuple[1]))
+            g.add_edge(pydotplus.Edge(new_tuple, 
+                                      id='\"{}|{}\"'.format(
+                                            new_tuple[0].strip('"'), 
+                                            new_tuple[1].strip('"'))))
+            #print('added {}'.format(new_tuple))
+            l_unique_edges.append(new_tuple)
 
     print('\t# of edges: {}'.format(len(l_unique_edges)))
     return len(l_unique_edges)
@@ -276,7 +284,7 @@ def save_graph(g, file_in):
     with open(full_output_name, 'r') as f:
         for line in f:
             if search_string in line:
-                print('found --> at line# {}'.format(line))
+                #print('found --> at line# {}'.format(line))
                 new_lines += js_string
             new_lines += line
     with open(full_output_name, "w") as text_file:
