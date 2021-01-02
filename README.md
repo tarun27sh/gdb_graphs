@@ -44,57 +44,90 @@ There are two parts to the whole process:
 ## Part I: Get data from GDB
 
 ### Test code    
-    $ cat test.c
-    #include<stdio.h>
 
+	$  cat test.c
+	#include<stdio.h>
+	#include<stdbool.h>
+	#include<stdlib.h>
+	#include<time.h>
+	
+	
+	static void func9(void) { printf("leaf\n"); }
 
-    static void func9(void) { printf("leaf\n");; }
-    void func8(void) { func9(); }
-    void func7(void) { func8(); }
-    void func6(void) { func7(); }
-    void func5(void) { func6(); }
-    void func4(void) { func5(); }
-    void func3(void) { func4(); }
-    void func2(void) { func3(); }
-    void func1(void) { func2(); }
-    int main()
-    {
-            func1();
-            return 0;
-    }
+	void func8(void) { func9(); }
+	
+	void func7_1(bool is_true, int *p) { printf("leaf (is_true=%d, ptr=%p\n", is_true, p); }
+	void func7(void) { func8(); }
+	
+	void func6(void) { func7(); }
+	
+	void func5_1(const char* str) { printf("leaf (%s)\n", str); }
+	void func5(void) {
+	    func5_1("graph me\n");
+	    func6();
+	}
+	
+	void func4(void) { func5(); }
+	void func3_1(int a, int b, int c) { printf("leaf\n"); }
+	void func3(void) {
+	    func3_1(rand(), rand(), rand());
+	    func4();
+	}
+	
+	void func2_1(int a, int b) { printf("leaf (%d, %d)\n", a, b);}
+	void func2(void) {
+	    func2_1(rand(),rand());
+	    func3();
+	}
+	void func1(void) { func2(); }
+	int main()
+	{
+	    srand(time(NULL));
+	    for(int i=0; i<10; ++i) {
+	            func1();
+	    }
+	        return 0;
+	}
 
 ### Enable debugging symbols    
-    $ test -g test.c
+    $ gcc -g test.c
 
-### Now, the GDB part
-#### start binary under GDB     
+### Start binary under GDB     
     $ gdb a.out
     . . .
     Reading symbols from a.out...done.
 
 #### Insert breakpoints on functions of interest, or to put in every funtion in a file:    
 
-    (gdb) rbreak test.c:.
-    Breakpoint 1 at 0x40058f: file he.c, line 12.
-    void func1(void);
-    Breakpoint 2 at 0x400583: file he.c, line 11.
-    void func2(void);
-    Breakpoint 3 at 0x400577: file he.c, line 10.
-    void func3(void);
-    Breakpoint 4 at 0x40056b: file he.c, line 9.
-    void func4(void);
-    Breakpoint 5 at 0x40055f: file he.c, line 8.
-    void func5(void);
-    Breakpoint 6 at 0x400553: file he.c, line 7.
-    void func6(void);
-    Breakpoint 7 at 0x400547: file he.c, line 6.
-    void func7(void);
-    Breakpoint 8 at 0x40053b: file he.c, line 5.
-    void func8(void);
-    Breakpoint 9 at 0x40052a: file he.c, line 4.
-    void func9(void);
-    Breakpoint 10 at 0x40059b: file he.c, line 15.
-    int main();
+	(gdb) rbreak test.c:.
+	Breakpoint 1 at 0x400786: file test/test.c, line 33.
+	void func1(void);
+	Breakpoint 2 at 0x400760: file test/test.c, line 30.
+	void func2(void);
+	Breakpoint 3 at 0x40073d: file test/test.c, line 28.
+	void func2_1(int, int);
+	Breakpoint 4 at 0x400704: file test/test.c, line 24.
+	void func3(void);
+	Breakpoint 5 at 0x4006f0: file test/test.c, line 22.
+	void func3_1(int, int, int);
+	Breakpoint 6 at 0x4006d7: file test/test.c, line 21.
+	void func4(void);
+	Breakpoint 7 at 0x4006c1: file test/test.c, line 17.
+	void func5(void);
+	Breakpoint 8 at 0x4006a4: file test/test.c, line 15.
+	void func5_1(const char *);
+	Breakpoint 9 at 0x400690: file test/test.c, line 13.
+	void func6(void);
+	Breakpoint 10 at 0x400684: file test/test.c, line 11.
+	void func7(void);
+	Breakpoint 11 at 0x400664: file test/test.c, line 10.
+	void func7_1(_Bool, int *);
+	Breakpoint 12 at 0x40064b: file test/test.c, line 8.
+	void func8(void);
+	Breakpoint 13 at 0x400796: file test/test.c, line 36.
+	int main();
+	Breakpoint 14 at 0x40063a: file test/test.c, line 7.
+	static void func9(void);
 
 #### Enable logging
     (gdb) set pagination off
@@ -116,101 +149,7 @@ There are two parts to the whole process:
     (gdb) r
     Starting program: /home/vagrant/c_code/a.out
 
-
-#### Once the program finishes, it would have dumped the logs to the disk in test.log    
-
-    $ cat test.log
-    Type commands for breakpoint(s) 1-10, one per line.
-    End with a line saying just "end".
-    Starting program: /home/vagrant/c_code/a.out
-
-    Breakpoint 9, main () at he.c:15
-    15              func1();
-    #0  main () at he.c:15
-
-    Breakpoint 1, func1 () at he.c:12
-    12      void func1(void) { func2(); }
-    #0  func1 () at he.c:12
-    #1  0x00000000004005a0 in main () at he.c:15
-
-    Breakpoint 2, func2 () at he.c:11
-    11      void func2(void) { func3(); }
-    #0  func2 () at he.c:11
-    #1  0x0000000000400594 in func1 () at he.c:12
-    #2  0x00000000004005a0 in main () at he.c:15
-
-    Breakpoint 3, func3 () at he.c:10
-    10      void func3(void) { func4(); }
-    #0  func3 () at he.c:10
-    #1  0x0000000000400588 in func2 () at he.c:11
-    #2  0x0000000000400594 in func1 () at he.c:12
-    #3  0x00000000004005a0 in main () at he.c:15
-
-    Breakpoint 4, func4 () at he.c:9
-    9       void func4(void) { func5(); }
-    #0  func4 () at he.c:9
-    #1  0x000000000040057c in func3 () at he.c:10
-    #2  0x0000000000400588 in func2 () at he.c:11
-    #3  0x0000000000400594 in func1 () at he.c:12
-    #4  0x00000000004005a0 in main () at he.c:15
-
-    Breakpoint 5, func5 () at he.c:8
-    8       void func5(void) { func6(); }
-    #0  func5 () at he.c:8
-    #1  0x0000000000400570 in func4 () at he.c:9
-    #2  0x000000000040057c in func3 () at he.c:10
-    #3  0x0000000000400588 in func2 () at he.c:11
-    #4  0x0000000000400594 in func1 () at he.c:12
-    #5  0x00000000004005a0 in main () at he.c:15
-
-    Breakpoint 6, func6 () at he.c:7
-    7       void func6(void) { func7(); }
-    #0  func6 () at he.c:7
-    #1  0x0000000000400564 in func5 () at he.c:8
-    #2  0x0000000000400570 in func4 () at he.c:9
-    #3  0x000000000040057c in func3 () at he.c:10
-    #4  0x0000000000400588 in func2 () at he.c:11
-    #5  0x0000000000400594 in func1 () at he.c:12
-    #6  0x00000000004005a0 in main () at he.c:15
-
-    Breakpoint 7, func7 () at he.c:6
-    6       void func7(void) { func8(); }
-    #0  func7 () at he.c:6
-    #1  0x0000000000400558 in func6 () at he.c:7
-    #2  0x0000000000400564 in func5 () at he.c:8
-    #3  0x0000000000400570 in func4 () at he.c:9
-    #4  0x000000000040057c in func3 () at he.c:10
-    #5  0x0000000000400588 in func2 () at he.c:11
-    #6  0x0000000000400594 in func1 () at he.c:12
-    #7  0x00000000004005a0 in main () at he.c:15
-
-    Breakpoint 8, func8 () at he.c:5
-    5       void func8(void) { func9(); }
-    #0  func8 () at he.c:5
-    #1  0x000000000040054c in func7 () at he.c:6
-    #2  0x0000000000400558 in func6 () at he.c:7
-    #3  0x0000000000400564 in func5 () at he.c:8
-    #4  0x0000000000400570 in func4 () at he.c:9
-    #5  0x000000000040057c in func3 () at he.c:10
-    #6  0x0000000000400588 in func2 () at he.c:11
-    #7  0x0000000000400594 in func1 () at he.c:12
-    #8  0x00000000004005a0 in main () at he.c:15
-
-    Breakpoint 10, func9 () at he.c:4
-    4       static void func9(void) { printf("leaf\n");; }
-    #0  func9 () at he.c:4
-    #1  0x0000000000400540 in func8 () at he.c:5
-    #2  0x000000000040054c in func7 () at he.c:6
-    #3  0x0000000000400558 in func6 () at he.c:7
-    #4  0x0000000000400564 in func5 () at he.c:8
-    #5  0x0000000000400570 in func4 () at he.c:9
-    #6  0x000000000040057c in func3 () at he.c:10
-    #7  0x0000000000400588 in func2 () at he.c:11
-    #8  0x0000000000400594 in func1 () at he.c:12
-    #9  0x00000000004005a0 in main () at he.c:15
-    [Inferior 1 (process 3363) exited normally]
-    $
-
+    Once the program finishes, it would have dumped the logs to the disk in test.log    
 
 
 ## Part II: run gen_graph.py on collected data
@@ -221,21 +160,19 @@ There are two parts to the whole process:
     sudo python3 -m pip install -r requiments.txt
 
 
-### Now run gen_graph.py    
+### Run gen_graph.py    
+    $  python3 gen_graph.py
+    usage: gen_graph.py [-h] -i INPUT_FILE [-f {gdb,objdump}]
+    gen_graph.py: error: the following arguments are required: -i/--input_file
 
-    $ python gen_graphs.py
-    Usage:
-    python3 ./gen_graphs.py  <gdb_backtrace_logs>
-    
-
-    $ python3 gen_graphs.py test.log
-    [1] parsing gdb logs..
-    [2] adding nodes..
-            # of nodes: 10
-    [3] adding edges..
-            # of edges: 9
-    [4] saving graph to:
-            /home/vagrant/gdb_graphs/test.svg
+    $  python3 gen_graph.py -i test/test.log
+	01/02/2021 08:36:58 PM [1] processing gdb bt data
+	01/02/2021 08:36:58 PM [2] adding nodes, edges, #ofnodes=13
+	01/02/2021 08:36:59 PM [3] Embedding JS
+	01/02/2021 08:36:59 PM [4] saving graph to:
+	01/02/2021 08:36:59 PM       /home/vagrant/dwnlds/gdb_graphs/test.svg
+	01/02/2021 08:36:59 PM Finished
+ 
 
 Open the svg file in a browser
 ![Alt text](gallery/test.png?raw=true "")
@@ -246,3 +183,4 @@ Open the svg file in a browser
   Click on a node and entire parent and child chain is highlighted
   (to reset -  reload page - untill I find a better way to do from JS)
 - C++ Support
+- Node tooltip shows function arguments (max 6)

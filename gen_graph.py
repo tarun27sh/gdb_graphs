@@ -1,19 +1,26 @@
+# Description:
+#       Generate dot graph from gdb backtracet data
 # Author: 
 #       Tarun Sharma (tarun27sh@gmail.com)
-# Description:
-#       1. reads gdb backtrace logs
-#       2. generates a function call graphs
-#       3. saves output in SVG format
-# Usage:
-#       ./gen_graphs.py <gdb_backtrace.log> 
 # Date:
 #       2019-01-19
+
 import os
 from matplotlib import use as muse
 from copy import deepcopy
 muse('Agg')
 import sys
 import pydotplus
+import argparse
+import pdb
+from pprint import pprint as pp
+import logging
+
+logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
+HTML_SEP = '&#10;&#13;'
 
 # Make resulting SVG interactive
 js_string='''
@@ -143,184 +150,199 @@ js_string='''
 ]]>
 </script>
 '''
-start_color = {
-                # format - style, fg, bg
-                'info':'\x1b[6;0;32m', # style, fg, bg
-                'dbg': '\x1b[6;23;40m',
-                'err': '\x1b[6;0;31m', # style, fg, bg
-              }
-end_color='\x1b[0m'
 
-def special_print(text, level):
-    print('{}{}{}'.format(start_color[level], text, end_color))
+# parses into node in graph
+class GDBFrame():
+    def __init__(self):
+        self.frame_no = None
+        self.fn_name = None
+        self.file_name = None
+        self.fn_args = {}
+        self.nof_arg_data = 0
+        self.callers = [] # parent nodes, list of GDBFrame objs
+        self.callees = [] # child nodes, list of GDBFrame objs
 
-# use master list to add nodes
-# no duplicates
-def add_nodes(g, l_unique_nodes):
-    special_print('[2] adding nodes..', 'info')
-    for elem in l_unique_nodes:
-        if ',' not in elem:
-            #print('adding {}'.format(elem.replace(":", "_")))
-            new_element_name = '\"{}\"'.format(elem)
-            #print('adding {}'.format(new_element_name))
-            g.add_node(pydotplus.Node(
+    def __str__(self):
+        format_str = '#{} fn={}, args={}, file={}'.format(self.frame_no, self.fn_name, self.fn_args, self.file_name)
+        return format_str
+
+    def parse_frame_line(self, frame_str):
+        frame_list = frame_str.split()
+        self.frame_no = int(frame_list[0].strip('#'))
+        if frame_list[1].startswith('0x'):
+            self.fn_name = frame_list[3]
+        else:
+            self.fn_name = frame_list[1]
+        self.file_name = frame_list[-1]
+        self.fn_args = frame_str.split('(')[1].split(')')[0]
+
+
+
+# collection of nodes
+class GenGraph:
+    def __init__(self, file_in, input_format='gdb'):
+        self.nof_frames = 0
+        self.parsed_frame_dict = {}   # key=fn_name, val=GDBFrame()
+        self.g = None
+        # create graph obj
+        self.g = pydotplus.Dot(graph_type='digraph', 
+                          graph_name='Created by: Tarun Sharma (tarun27sh@gmail.com)', 
+                          rankdir='LR', 
+                          strict=True,
+                         )
+        if input_format==None or input_format=='gdb':
+            self.parse_bt_file(file_in)
+            self.add_nodes_edges()
+        self.add_legend(len(self.g.get_edges()), len(self.g.get_nodes()))
+        self.save_graph(file_in)
+
+    def __str__(self):
+        format_str = 'Len(frames) = {}, 1st frame={}'.format(len(self.parsed_frame_dict), self.parsed_frame_dict[list(self.parsed_frame_dict.keys())[0]])
+        return format_str
+
+    def fix_up_global_dict(self, new_bt):
+        logger.debug('fix up, #ofFrames={}'.format(len(new_bt)))
+        for frame in new_bt:
+            if frame.fn_name in self.parsed_frame_dict:
+                existing_frame = self.parsed_frame_dict[frame.fn_name]
+                existing_frame.callees.extend(frame.callees)
+                existing_frame.callers.extend(frame.callers)
+                # limit arg data to 6 entries only
+                if frame.fn_args and existing_frame.nof_arg_data < 5:
+                    existing_frame.fn_args += '{}{}'.format(HTML_SEP, frame.fn_args) # provide HTML format '\n'
+                    existing_frame.nof_arg_data += 1
+            else:
+                self.parsed_frame_dict[frame.fn_name] = frame
+
+    def parse_bt_file(self, in_file):
+        logger.info('[1] processing gdb bt data')
+        current_frame_list = []
+        old_frame = None
+        with open(in_file) as f:
+            for i,line in enumerate(f):
+                if line.startswith('#'):
+                    frame = GDBFrame()
+                    frame.parse_frame_line(line)
+                    # new bt
+                    if frame.frame_no == 0:
+                        # new bt
+                        callee = None
+                        if len(current_frame_list) > 0:
+                            for i in range(len(current_frame_list) - 1):
+                                if callee:
+                                    current_frame_list[i].callees.append(callee)
+                                current_frame_list[i].callers.append(current_frame_list[i+1])
+                                callee = current_frame_list[i]
+                            current_frame_list[-1].callees.append(callee)
+                            self.fix_up_global_dict(current_frame_list)
+
+                        # reset for next iteration
+                        current_frame_list = []
+                        current_frame_list.append(frame)
+                    else:
+                        # exising bt
+                        current_frame_list.append(frame)
+
+
+    def add_nodes_edges(self):
+        i = 0
+        edge_seen_dict = {} # key = edge1_edge2
+        logger.info('[2] adding nodes, edges, #ofnodes={}'.format(len(self.parsed_frame_dict)))
+        for fn in self.parsed_frame_dict:
+            print('Frame# [{}]\r'.format(i), end='')
+            i+= 1
+            frame = self.parsed_frame_dict[fn]
+            new_element_name = '\"{}\"'.format(frame.fn_name)
+            tooltip_str = '{}{}{}{}'.format(frame.file_name, HTML_SEP,
+                                            frame.fn_args, HTML_SEP)
+            logger.debug('adding node={}'.format(new_element_name))
+            self.g.add_node(pydotplus.Node(
                                       new_element_name, 
                                       id=new_element_name,
-                                      style="filled", 
+                                      penwidth=0,
+                                      tooltip=tooltip_str,
+                                      style="filled",
                                       fillcolor='cornflowerblue', 
+                                      #bgcolor='cornflowerblue',
                                       shape='box', 
+                                      margin=0,
                                       fontname="Consolas", 
+                                      #fontname="Courier New", 
                                       fontsize=12.0,
                                       fontcolor='white'))
-    print('\t# of nodes: {}'.format(len(l_unique_nodes)))
-
-def add_edges(g, file_in):
-    # get edges
-    fn_file=open(file_in,'r')
-    special_print('[3] adding edges..', 'info')
-    curr_bt=[]
-    edge_tuples=[]
-    backtraces=[]
-    for i,line in enumerate(fn_file):
-        line=line.strip()
-        if '#' in line:
-            # head node of backtrace
-            if '#0' in line:
-                fn=line.split()[1]
-                # previous backtrace complete, add it to master list
-                if len(curr_bt) > 0 :
-                    backtraces.append(curr_bt)
-                    curr_bt = []
-                # frame 0 fn-name always at index 1 of line.split()
-                curr_bt.append(line.split()[1])
-            else:
-                if 'breakpoint' in line or '\\' in line:
-                    pass #continue
-                if line.split()[1].startswith('0x'):
-                    fn = line.split()[3]
-                else:
-                    fn = line.split()[1]
-                if fn and \
-                   ('(' not in fn) and \
-                   ('>' not in fn) and \
-                   ('<' not in fn) and \
-                   ('=' not in fn) and \
-                   ('/' not in fn):
-                    curr_bt.append(fn)
-    # save the last backtrace
-    backtraces.append(list(curr_bt))
-    for bt in backtraces:
-        fn_old = bt[0]
-        for fn in bt[1:]:
-            if (fn, fn_old) not in edge_tuples:
-                #print('adding edge:  {} --> {}'.format(fn, fn_old))
-                edge_tuples.append((fn, fn_old))
-            fn_old=deepcopy(fn)
-
-    l_unique_edges=[]
-    file_out_data=file_in[:-4]+".data"
-    thefile = open(file_out_data, 'w')
-    for edge_tuple in edge_tuples:
-        if edge_tuple not in l_unique_edges:
-            new_tuple = ('\"{}\"'.format(edge_tuple[0]),
-                         '\"{}\"'.format(edge_tuple[1]))
-            g.add_edge(pydotplus.Edge(new_tuple, 
-                                      id='\"{}|{}\"'.format(
-                                            new_tuple[0].strip('"'), 
-                                            new_tuple[1].strip('"'))))
-            #print('added {}'.format(new_tuple))
-            l_unique_edges.append(new_tuple)
-
-    print('\t# of edges: {}'.format(len(l_unique_edges)))
-    return len(l_unique_edges)
-
-def parse_gdb_logs(file_in):
-    l_unique_nodes=[]
-    fn_file=open(file_in,'r')
-    special_print('[1] parsing gdb logs..', 'info')
-    for i,line in enumerate(fn_file):
-        line=line.strip()
-        t_temp=()
-        if '#' in line and (len(line.split(' ')) >= 4):
-            # new back trace
-            if '#0' in line:
-                # if list has previous frame, add it to master list
-                if line.split()[1].startswith('0x'):
-                    fn = line.split()[3]
-                else:
-                    fn = line.split()[1]
-                if fn not in l_unique_nodes:
-                    #print('Adding #0 {}'.format(fn))
-                    l_unique_nodes.append(fn)
-            else:
-                # non f#0 frame
-                if line.split()[1].startswith('0x'):
-                    fn=line.split()[3]
-                else:
-                    fn=line.split()[1]
-                if fn and \
-                   fn not in l_unique_nodes and \
-                   ('(' not in fn) and \
-                   ('>' not in fn) and \
-                   ('<' not in fn) and \
-                   ('=' not in fn) and \
-                   ('/' not in fn):
-                    #print('Adding #!0 {}'.format(fn))
-                    l_unique_nodes.append(fn)
-    return l_unique_nodes
-
-def save_graph(g, file_in):
-    # use master list to add edges
-    # no duplicates
-    special_print('[4] saving graph to:', 'info')
-    #g.write(file_in[:-4]+".dot")
-    file_name = file_in.split('/')[-1]
+            for callee in frame.callees:
+                if callee:
+                    new_tuple = ('\"{}\"'.format(frame.fn_name),
+                                 '\"{}\"'.format(callee.fn_name))
+                    key = '{}_{}'.format(frame.fn_name, callee.fn_name)
+                    if key not in edge_seen_dict:
+                        logger.debug('adding edge={}'.format(new_tuple))
+                        self.g.add_edge(pydotplus.Edge(new_tuple, 
+                                                  id='\"{}|{}\"'.format(
+                                                  new_tuple[0].strip('"'), 
+                                                  new_tuple[1].strip('"')),
+                                                  color='grey',
+                                                  ))
+                        edge_seen_dict[key] = True
+            for caller in frame.callers:
+                new_tuple = ('\"{}\"'.format(caller.fn_name),
+                             '\"{}\"'.format(frame.fn_name))
+                key = '{}_{}'.format(caller.fn_name, frame.fn_name)
+                if key not in edge_seen_dict:
+                    logger.debug('adding edge={}'.format(new_tuple))
+                    self.g.add_edge(pydotplus.Edge(new_tuple, 
+                                              id='\"{}|{}\"'.format(
+                                              new_tuple[0].strip('"'), 
+                                              new_tuple[1].strip('"')),
+                                              color='grey',
+                                              ))
+                    edge_seen_dict[key] = True
     
-    full_output_name="{}/{}.svg".format(os.getcwd(), file_name[:-4])
-    print("\t{}\n".format(full_output_name))
-    g.write_svg(full_output_name)
-    search_string = 'graph0'
-    new_lines = ''
-    with open(full_output_name, 'r') as f:
-        for line in f:
-            if search_string in line:
-                #print('found --> at line# {}'.format(line))
-                new_lines += js_string
-            new_lines += line
-    with open(full_output_name, "w") as text_file:
-        text_file.write(new_lines)
+    def save_graph(self, file_in):
+        file_name = file_in.split('/')[-1]
+        
+        full_output_name="{}/{}.svg".format(os.getcwd(), file_name[:-4])
+        self.g.write_svg(full_output_name, 
+                    prog='dot')
+        logger.info('[3] Embedding JS')
+        search_string = 'graph0'
+        new_lines = ''
+        with open(full_output_name, 'r') as f:
+            for line in f:
+                if search_string in line:
+                    new_lines += js_string
+                new_lines += line
+        logger.info('[4] saving graph to:')
+        logger.info("      {}\n".format(full_output_name))
+        with open(full_output_name, "w") as text_file:
+            text_file.write(new_lines)
+        logger.info('Finished')
+    
+    def add_legend(self,nedges, nnodes):
+        logger.debug('adding legend')
+        node = pydotplus.Node(
+                                  label='Nodes = {}\n Edges = {}'.format(nnodes, nedges),
+                                  penwidth=0,
+                                  style="filled", 
+                                  fillcolor='gold1', 
+                                  shape='box', 
+                                  fontname="Consolas", 
+                                  fontsize=14.0)
+        self.g.add_node(node)
 
-def add_legend(g, nedges, nnodes):
-    node = pydotplus.Node(
-                              label='Nodes = {}\n Edges = {}'.format(nedges, nnodes),
-                              style="filled", 
-                              fillcolor='gold1', 
-                              shape='box', 
-                              fontname="Consolas", 
-                              fontsize=14.0)
-    #node = pydotplus.Node('legend')
-    g.add_node(node)
-
-def process(file_in):
-    # hold egdes in list of tuples
-    l_unique_nodes=[]
-
-    g = pydotplus.Dot(graph_type='digraph', 
-                      graph_name='Created by: Tarun Sharma (tarun27sh@gmail.com)', 
-                      rankdir='LR', 
-                      simplify='True')
-    #                  bgcolor='grey35')
-    l_unique_nodes = parse_gdb_logs(file_in)
-    add_nodes(g, l_unique_nodes)
-    no_of_edges = add_edges(g, file_in)
-    add_legend(g, no_of_edges, len(l_unique_nodes))
-    save_graph(g, file_in)
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        special_print('Usage:', 'err')
-        special_print('./gen_graphs.py  <gdb_backtrace_logs>', 'err')
+    parser = argparse.ArgumentParser(description='read gen_graph inputs')
+    parser.add_argument('-i', '--input_file', 
+                        help='input data file', 
+                        required=True)
+    parser.add_argument('-f', '--input_file_format', 
+                        help='input data file format (default=gdb)', 
+                        choices=['gdb', 'objdump'])
+    args = parser.parse_args()
+
+    if args.input_file is None:
+        args.print_usage()
         sys.exit()
-    else:
-        file_in = sys.argv[1].rstrip()
-        process(file_in)
+    GenGraph(args.input_file, args.input_file_format)
+
